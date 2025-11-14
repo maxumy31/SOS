@@ -1,0 +1,4 @@
+/mongo-data
+*.env
+docker-compose.yml
+node_modules
