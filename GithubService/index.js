@@ -7,19 +7,29 @@ import { handleGetKey, markAsProcessed } from './endpoints.js'
 const queryCollection = "query"
 const visitedCollection = "visited"
 const stateCollection = "state"
-const fastify = Fastify({logger:true})
+
+const fastify = Fastify({
+  logger: {
+    level: 'info',
+    transport: {
+      target: 'pino-pretty',
+      options: {
+        translateTime: 'HH:MM:ss Z',
+        ignore: 'pid,hostname,level',
+      }
+    }
+  }
+})
+
 const generator = gen.NewDateGenerator(await GetDateState())
 
-const maxKey = 2
-fastify.get('/:key',async function handler(req,reply) {
-    return handleGetKey(maxKey,req,reply)
+fastify.get('/',async function handler(req,reply) {
+    return handleGetKey(req,reply,fastify)
 })
 
-fastify.delete('/:key/:id',async function handler(req,reply) {
-    return markAsProcessed(maxKey,req,reply)
+fastify.delete('/:id',async function handler(req,reply) {
+    return markAsProcessed(req,reply,fastify)
 })
-
-
 
 
 function ParseGithubItem(response) {
@@ -38,7 +48,6 @@ function ParseGithubItem(response) {
 
 function WriteBatch(batch) {
     const names = batch.map(data => data.fullname).map(fname => {return {name : fname}})
-    //console.log(names)
     db.insertBatch(visitedCollection,names)
     const themeBatch = batch.filter(data => data.dependencies && data.dependencies != 0 && 
         data.topics && data.topics.length != 0)
@@ -48,17 +57,18 @@ function WriteBatch(batch) {
 }
 
 async function SaveNewDateState(date) {
-    console.log(`Updated date. New date : ${date}`)
+    fastify.log.info(`Updated date. New date : ${date}`)
     await db.updateData(stateCollection, {}, { $set: { date: date } });
 }
 
 async function GetDateState() {
     const res =  await db.findFirst(stateCollection,{})
     if(res) {
-        console.log(`Loaded date : ${res.date}`)
+        fastify.log.info(`Loaded date from db: ${res.date}`)
         return new Date(res.date)
     } else {
         const date = new Date()
+        fastify.log.info(`Unable to find date from db, created new date : ${date}`)
         db.insertData(stateCollection,{date : date})
         return date
     }
@@ -66,6 +76,7 @@ async function GetDateState() {
 
 async function FetchAllRepos(date) {
     const formatedDate = gen.TimeToStringQueryFormat(date)
+    fastify.log.info(`Fetching repos from date ${formatedDate} started`)
     const per_page = 100
     const starThreshold = 10
     let batch = []
@@ -73,23 +84,26 @@ async function FetchAllRepos(date) {
     const total = first.data.total_count
     const pages = Math.ceil(total / per_page)
 
+    fastify.log.info(`Fetching repos from date ${formatedDate} page 1`)
     for(const f of first.data.items) {
         const parsed = ParseGithubItem(f)
         batch.push(parsed)
     }
     
     for(let i = 2; i <= pages;i++) {
+        fastify.log.info(`Fetching repos from date ${formatedDate} page ${i}`)
         const page = await gh.FetchRepos(formatedDate,i,per_page,starThreshold)
         const parsed = ParseGithubItem(page)
         batch.push(parsed)
     }
-    //console.log(batch)
+    fastify.log.info(`Fetching repos from date ${formatedDate} finished`)
     return batch
 }
 
 async function ProcessDay() {
     try {
-    const day = generator.Next()
+        const day = generator.Next()
+        fastify.log.info(`Processing day ${day.toISOString()}`)
         let batch = await FetchAllRepos(day)
         for(let i = 0; i < batch.length;i++) {
             const [org,name] = batch[i].fullname.split("/")
@@ -99,9 +113,10 @@ async function ProcessDay() {
         if (batch.length > 0) {
             WriteBatch(batch)
         }
+        fastify.log.info(`Day ${day.toISOString} processed. Skipping to the next day.`)
         SaveNewDateState(day)
     } catch(error) {
-        console.log(`Error : ${error}. Skipping to the next day.`)
+        fastify.log.error(`Error : ${error} on day ${day.toISOString}. Skipping to the next day.`)
         const day = generator.Next()
         SaveNewDateState(day)
     }
@@ -109,6 +124,7 @@ async function ProcessDay() {
 }
 
 async function StartProcessing() {
+    fastify.log.info("Starting processing")
     while (true) {
         await ProcessDay()
     }
@@ -121,6 +137,6 @@ try {
     StartProcessing()
 
 } catch (err) {
-    fastify.log.error(err)
+    fastify.log.error(`Server crashed with error ${err}`)
     process.exit(1)
 }

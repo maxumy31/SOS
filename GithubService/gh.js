@@ -10,7 +10,6 @@ async function GetReposFromTime(time) {
     }
 
     const query = `language:javascript fork:false created:${time} `;
-    //console.log(query)
     const response = await octokit.rest.search.repos({
       q: query,
       per_page: 10,

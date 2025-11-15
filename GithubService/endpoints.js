@@ -7,48 +7,27 @@ const visitedCollection = "visited"
 const stateCollection = "state"
 
 
-export async function handleGetKey(maxKey,req,reply) {
-    const key = parseInt(req.params.key,10)
-        if(isNaN(key)) {
-            return {error: "Invalid key format"}
-        }
-        if (key >= maxKey) {
-            return {error : "Max key exceeded"}
-        }
-        
-        const repos = await db.findFirst(queryCollection, {
-            $expr: {
-                $eq: [
-                    { $mod: [{ $dayOfMonth: '$created_at' }, 2] },
-                    key
-                ]
-            }
-        });
+export async function handleGetKey(req,reply,logger) {
+        const repos = await db.findFirst(queryCollection, {used_in_request : false});
     
         if (!repos) {
-            return {error: "Cannot find repos for key"}
+            logger.log.info(`Cannot find repo for request`)
+            return {error: "Cannot find repo"}
         } else {
+            logger.log.info(`Found repo ${repos._id} for request`)
             return {repo : repos}
         }
 }
 
-export async function markAsProcessed(maxKey,req,reply) {
-    const key = parseInt(req.params.key,10)
-    const id = req.params.id
-    if(isNaN(key)) {
-        return {error: "Invalid key format"}
-    }
-    if (key >= maxKey) {
-        return {error : "Max key exceeded"}
-    }    
+export async function markAsProcessed(req,reply,logger) {
+    const id = req.params.id  
     const objId = new ObjectId(id)
     const res = await db.updateData(queryCollection,{_id:objId},{ $set: { used_in_request: true } })
-    console.log("id = ",id)
-    console.log("UPDATED!")
-    console.log(res)
     if (!res) {
+        logger.log.info(`Cannot update value with id = ${id}`)
         return {error:"Cannot update value by id"}
     } else {
+        logger.log.info(`Updated value with id = ${id}`)
         return {response:"Value was updated"}
     }
 }
