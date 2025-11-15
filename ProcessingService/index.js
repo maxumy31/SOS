@@ -3,7 +3,6 @@ import calc from "./calculations.js"
 import db from "./db.js"
 import pino from 'pino';
 
-
 const logger = pino({
   transport: {
     target: 'pino-pretty',
@@ -17,13 +16,13 @@ const topicsCollection = "topics"
 
 
 const errorDelayTime = 5 * 60 * 1000
-
+const GH_SERVICE_URI = process.env.GH_SERVICE_URI
+console.log("URI = ",GH_SERVICE_URI)
 StartPolling()
-
 async function StartPolling() {
     while (true) {
         logger.info(`Fetching next repo`)
-        const resp = await axios.get(`http://localhost:8090/`)
+        const resp = await axios.get(`${GH_SERVICE_URI}/`)
         if (resp.data.error) {
             logger.info(`Got error from request`)
             logger.info(`Will continue work in ${errorDelayTime}ms`)
@@ -38,7 +37,7 @@ async function StartPolling() {
         db.insertBatch(topicsCollection,tranformed)
         logger.info("New topic batch inserted")
         logger.info("Request to update inserted repo")
-        const resp2 = await axios.delete(`http://localhost:8090/${resp.data.repo._id}`)
+        const resp2 = await axios.delete(`${GH_SERVICE_URI}/${resp.data.repo._id}`)
         logger.info("Request to update inserted repo finished")
     }
 }

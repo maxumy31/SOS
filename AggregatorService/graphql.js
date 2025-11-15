@@ -68,7 +68,7 @@ const createResolvers = (logger) => { return {
                 cmpResult = a.totalStars - b.totalStars
                 break;
             default:
-                logger.error("Unknown topic sorting strategy!!! Using NAME sorting")
+                logger.log.error("Unknown topic sorting strategy!!! Using NAME sorting")
             case 'NAME':
                 if(a.name && b.name) {
                     cmpResult = -(a.name.localeCompare(b.name,'en'))
@@ -108,7 +108,7 @@ const createResolvers = (logger) => { return {
             cmpResult = a.count - b.count
             break;
         default:
-            logger.error("Unknown topic sorting strategy!!! Using NAME sorting")
+            logger.log.error("Unknown topic sorting strategy!!! Using NAME sorting")
           case 'NAME':
             if(a.name && b.name) {
                 cmpResult = -(a.name.localeCompare(b.name,'en'))

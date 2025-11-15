@@ -1,0 +1,48 @@
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./mongo-data:/data/db
+
+  mongo-express:
+    image: mongo-express:latest
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_MONGODB_PORT: 27017
+    depends_on:
+      mongodb:
+        condition: service_healthy
+  
+  gh-service:
+    build: ./GithubService/.
+    container_name: gh-service
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017
+      - SERVICE_PORT=${GITHUB_SERVICE_PORT}
+      - TOKEN=${TOKEN:-0}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  processing-service:
+    build: ./ProcessingService/.
+    container_name: proc-service
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017
+      - GH_SERVICE_URI=http://gh-service:${GITHUB_SERVICE_PORT}
+      - SERVICE_PORT=${PROCESSING_SERVICE_PORT}
+    depends_on:
+      gh-service:
+        condition: service_healthy
+
+volumes:
+  mongodb_data:
+

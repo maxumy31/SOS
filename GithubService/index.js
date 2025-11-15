@@ -133,7 +133,7 @@ async function StartProcessing() {
 
 try {
     const fetchInterval = 1000
-    await fastify.listen({ port: process.env.PORT})
+    await fastify.listen({ port: process.env.SERVICE_PORT, host:'0.0.0.0'})
     StartProcessing()
 
 } catch (err) {

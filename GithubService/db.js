@@ -1,10 +1,28 @@
 import { MongoClient } from 'mongodb';
-const uri = 'mongodb://localhost:27017'; // строка подключения
+const uri = process.env.MONGODB_URI
 
 const dbName = "db"
-const client = new MongoClient(uri);
+let client = null
+await connectWithRetry();
+
 const connection = await client.connect()
 
+async function connectWithRetry() {
+  let retries = 5;
+  while (retries) {
+    try {
+      client = new MongoClient(uri);
+      await client.connect();
+      console.log('Connected to MongoDB');
+      return;
+    } catch (error) {
+      retries--;
+      console.log(`MongoDB connection failed, ${retries} retries left`);
+      await new Promise(res => setTimeout(res, 5000));
+    }
+  }
+  throw new Error('Could not connect to MongoDB');
+}
 
 const createInsertFunction = (dbName) => {
     async function insertData(dbName,collection,data) {

@@ -16,6 +16,7 @@ const fastify = Fastify({
     }
   }
 })
+
 const timeoutInMinutes = 15
 let state = []
 
