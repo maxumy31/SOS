@@ -113,10 +113,10 @@ async function ProcessDay() {
         if (batch.length > 0) {
             WriteBatch(batch)
         }
-        fastify.log.info(`Day ${day.toISOString} processed. Skipping to the next day.`)
+        fastify.log.info(`Day ${day.toISOString()} processed. Skipping to the next day.`)
         SaveNewDateState(day)
     } catch(error) {
-        fastify.log.error(`Error : ${error} on day ${day.toISOString}. Skipping to the next day.`)
+        fastify.log.error(`Error : ${error} on day ${day.toISOString()}. Skipping to the next day.`)
         const day = generator.Next()
         SaveNewDateState(day)
     }
