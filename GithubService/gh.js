@@ -27,7 +27,6 @@ async function FetchRepos(time,page,per_page,starThreshold) {
     }
 
     const query = `language:javascript fork:false created:${time} stars:>=${starThreshold}`;
-    //console.log(query)
     const response = await octokit.rest.search.repos({
       q: query,
       per_page: per_page,

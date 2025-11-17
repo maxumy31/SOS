@@ -58,10 +58,8 @@ services:
   aggregation-1-service:
     build: ./AggregatorService/.
     container_name: aggreagation1-service
-    ports:
-      - $OUT_PORT:$AGGREGATOR_1_SERVICE_PORT
     environment:
-      - NODE_ENV=develompnet
+      - NODE_ENV=development
       - MONGODB_URI=mongodb://mongodb:27017
       - SERVICE_PORT=${AGGREGATOR_1_SERVICE_PORT}
     depends_on:
@@ -71,15 +69,25 @@ services:
   aggregation-2-service:
     build: ./AggregatorService/.
     container_name: aggreagation2-service
-    ports:
-      - 8099:$AGGREGATOR_2_SERVICE_PORT
     environment:
-      - NODE_ENV=develompnet
+      - NODE_ENV=development
       - MONGODB_URI=mongodb://mongodb:27017
       - SERVICE_PORT=${AGGREGATOR_2_SERVICE_PORT}
     depends_on:
       mongodb:
         condition: service_healthy
+
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - $OUT_PORT:80
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - aggregation-1-service
+      - aggregation-2-service
+    restart: unless-stopped
 
 volumes:
   mongodb_data:
