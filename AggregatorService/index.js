@@ -20,6 +20,10 @@ const fastify = Fastify({
 const timeoutInMinutes = 15
 let state = []
 
+//Нужно подождать актуальные данные, иначе работаем с пустым массивом
+await CompleteAggregation()
+
+
 const server = new ApolloServer({
   typeDefs:ql.typeDefs,
   resolvers:ql.createResolvers(fastify),
@@ -36,16 +40,15 @@ fastify.get('/health', async (req, reply) => {
   return { status: 'ok' };
 });
 
-await fastify.listen({port:8099})
+await fastify.listen({port:process.env.SERVICE_PORT, host:"0.0.0.0"})
 
-CompleteAggregation()
 async function CompleteAggregation() {
     const start = performance.now()
     const res = await db.aggregateResults()
     state = res
     const end = performance.now()
     const benchmark= Math.round(end-start)
-    fastify.log.info(`Aggregation query completed.Took ${benchmark}ms. Will retry query in ${timeoutInMinutes} minutes.`)
-    db.saveBenchmark({type:"Topics aggregation",date:new Date(),time:benchmark})
+    fastify.log.info(`Aggregation query completed.Took ${benchmark}ms. Will retry query in ${timeoutInMinutes} minutes. Got ${res.length} results.`)
+    db.saveBenchmark({type:"Topics aggregation",date:new Date(),time:benchmark,data_size : res.length})
     setTimeout(CompleteAggregation,timeoutInMinutes * 60 * 1000)
 }

@@ -27,6 +27,11 @@ fastify.get('/',async function handler(req,reply) {
     return handleGetKey(req,reply,fastify)
 })
 
+fastify.get('/health',async function handler(req,reply) {
+    fastify.log.info("Healthcheck")
+    return {status: "ok"}
+})
+
 fastify.delete('/:id',async function handler(req,reply) {
     return markAsProcessed(req,reply,fastify)
 })

@@ -7,6 +7,12 @@ services:
       - "27017:27017"
     volumes:
       - ./mongo-data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
 
   mongo-express:
     image: mongo-express:latest
@@ -30,6 +36,12 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl", "http://localhost:8090/health"]
+      interval: 20s
+      timeout: 20s
+      retries: 3
+      start_period: 15s
 
   processing-service:
     build: ./ProcessingService/.
@@ -41,6 +53,32 @@ services:
       - SERVICE_PORT=${PROCESSING_SERVICE_PORT}
     depends_on:
       gh-service:
+        condition: service_healthy
+
+  aggregation-1-service:
+    build: ./AggregatorService/.
+    container_name: aggreagation1-service
+    ports:
+      - $OUT_PORT:$AGGREGATOR_1_SERVICE_PORT
+    environment:
+      - NODE_ENV=develompnet
+      - MONGODB_URI=mongodb://mongodb:27017
+      - SERVICE_PORT=${AGGREGATOR_1_SERVICE_PORT}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+  
+  aggregation-2-service:
+    build: ./AggregatorService/.
+    container_name: aggreagation2-service
+    ports:
+      - 8099:$AGGREGATOR_2_SERVICE_PORT
+    environment:
+      - NODE_ENV=develompnet
+      - MONGODB_URI=mongodb://mongodb:27017
+      - SERVICE_PORT=${AGGREGATOR_2_SERVICE_PORT}
+    depends_on:
+      mongodb:
         condition: service_healthy
 
 volumes:
